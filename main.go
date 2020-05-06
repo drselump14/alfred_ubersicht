@@ -79,8 +79,15 @@ func run() {
 	filteredWidgets = filter(widgets, filterFunc)
 
 	for _, item := range filteredWidgets {
+		var status string
+		if item.Hidden {
+			status = "disabled"
+		} else {
+			status = "enabled"
+		}
+
 		wf.NewItem(item.ID).
-			Subtitle(fmt.Sprintf("hidden: %v", item.Hidden)).
+			Subtitle(fmt.Sprintf("status: %s", status)).
 			Autocomplete(item.ID).
 			Arg(item.ID).
 			Valid(true)
