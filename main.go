@@ -10,11 +10,6 @@ import (
 	"os/exec"
 )
 
-var (
-	query      = flag.String("query", "Google", "Search term")
-	maxResults = flag.Int64("max-results", 10, "Max YouTube results")
-)
-
 // Widget does
 // widget struct exported from main.scpt
 //
@@ -26,6 +21,10 @@ type Widget struct {
 // Workflow is the main API
 var wf *aw.Workflow
 
+var (
+	filterFlag = flag.String("filterFlag", "none", "get enabled widgets")
+)
+
 func init() {
 	// Create a new Workflow using default settings.
 	// Critical settings are provided by Alfred via environment variables,
@@ -33,7 +32,7 @@ func init() {
 	wf = aw.New()
 }
 
-func run() {
+func listWidgets() []Widget {
 	out, err := exec.Command("/usr/bin/osascript", "main.scpt").Output()
 
 	if err != nil {
@@ -47,7 +46,39 @@ func run() {
 		log.Fatal(err)
 	}
 
-	for _, item := range widgets {
+	return widgets
+
+}
+
+func filter(widgets []Widget, test func(Widget) bool) (ret []Widget) {
+	for _, widget := range widgets {
+		if test(widget) {
+			ret = append(ret, widget)
+		}
+	}
+	return
+}
+
+func run() {
+	flag.Parse()
+
+	widgets := listWidgets()
+	filteredWidgets := []Widget{}
+
+	var filterFunc func(widget Widget) bool
+
+	switch *filterFlag {
+	case "enabled":
+		filterFunc = func(widget Widget) bool { return !widget.Hidden }
+	case "disabled":
+		filterFunc = func(widget Widget) bool { return widget.Hidden }
+	case "none":
+		filterFunc = func(widget Widget) bool { return true }
+	}
+
+	filteredWidgets = filter(widgets, filterFunc)
+
+	for _, item := range filteredWidgets {
 		wf.NewItem(item.ID).
 			Subtitle(fmt.Sprintf("hidden: %v", item.Hidden)).
 			Autocomplete(item.ID).
